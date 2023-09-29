@@ -2,6 +2,9 @@ import uuid
 from flask import request
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+from db import db
+from models import StoreModel
 from schemas import StoreSchema, StoreUpdateSchema
 
 blp = Blueprint("stores", __name__, description="Operations on stores")
@@ -11,43 +14,46 @@ blp = Blueprint("stores", __name__, description="Operations on stores")
 class Store(MethodView):
     @blp.response(200, StoreSchema)
     def get(self, store_id):
-        try:
-            return stores[store_id]
-        except KeyError:
-            abort(404, message="Store not found.")
+        store = StoreModel.query.get_or_404(store_id)
+        return store
 
     def delete(self, store_id):
-        try:
-            del stores[store_id]
-            return {"message": "Store deleted"}
-        except:
-            abort(404, message="Store not found.")
+        store = StoreModel.query.get_or_404(store_id)
+        db.session.delete(store)
+        db.session.commit()
+        return {"message": "Store deleted"}
 
     @blp.arguments(StoreUpdateSchema)
     @blp.response(200, StoreSchema)
     def put(self, store_data, store_id):
-        try:
-            store = stores[store_id]
-            store |= store_data
+        store = StoreModel.query.get(store_id)
+        if store:
+            store.name = store_data["name"]
+        else:
+            store = StoreModel(id=store_id, **store_data)
 
-            return store
-        except:
-            abort(404, message="Store not found")
+        db.session.add(store)
+        db.session.commit()
+
+        return store
 
 
 @blp.route("/store")
 class StoreList(MethodView):
     @blp.response(200, StoreSchema(many=True))
     def get(self):
-        return stores.values()
+        return StoreModel.query.all()
 
     @blp.arguments(StoreSchema)
     @blp.response(200, StoreSchema)
     def post(self, store_data):
-        for store in stores:
-            if store_data["name"] == store["name"]:
-                abort(400, message="Store already exists")
-        store_id = uuid.uuid4().hex
-        store = {**store_data, "id": store_id}
-        stores[store_id] = store
+        store = StoreModel(**store_data)
+
+        try:
+            db.session.add(store)
+            db.session.commit()
+        except IntegrityError:
+            abort(400, message="A store with the name already exists")
+        except SQLAlchemyError:
+            abort(500, message="An error occurred while trying to insert the store")
         return store, 201
