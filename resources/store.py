@@ -43,7 +43,7 @@ class StoreList(MethodView):
         return StoreModel.query.all()
 
     @blp.arguments(StoreSchema)
-    @blp.response(200, StoreSchema)
+    @blp.response(201, StoreSchema)
     def post(self, store_data):
         store = StoreModel(**store_data)
 
@@ -54,4 +54,4 @@ class StoreList(MethodView):
             abort(400, message="A store with the name already exists")
         except SQLAlchemyError:
             abort(500, message="An error occurred while trying to insert the store")
-        return store, 201
+        return store
