@@ -2,6 +2,7 @@ import os
 from flask import Flask, jsonify
 from flask_smorest import Api
 from flask_jwt_extended import JWTManager
+from flask_migrate import Migrate
 from db import db
 import models
 from resources.item import blp as ItemBlueprint
@@ -30,9 +31,7 @@ def create_app(db_url=None):
     app.config["JWT_SECRET_KEY"] = "259909252070246346255773166438973990601"
     db.init_app(app)
 
-    with app.app_context():
-        db.create_all()
-
+    migrate = Migrate(app, db)
     api = Api(app)
     jwt = JWTManager(app)
 
