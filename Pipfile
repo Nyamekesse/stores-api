@@ -11,6 +11,7 @@ flask-sqlalchemy = "*"
 sqlalchemy = "*"
 flask-jwt-extended = "*"
 passlib = "*"
+flask-migrate = "*"
 
 [dev-packages]
 
